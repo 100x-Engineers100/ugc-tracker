@@ -1,0 +1,884 @@
+import axios, { AxiosResponse } from "axios";
+
+export interface Post {
+  id: string;
+  url: string;
+  postedAt: string;
+  hasReacted: boolean;
+}
+
+export interface Quiz {
+  id?: string;
+  cohortId: string;
+  weekNumber: number;
+  questions: Question[];
+}
+interface AuthResponse {
+  token: string;
+  user: {
+    id: string;
+    email: string;
+    role: string;
+  };
+}
+
+export interface Option {
+  id?: string;
+  optionText: string;
+  isCorrect?: boolean;
+}
+
+export interface Question {
+  id?: string;
+  questionText: string;
+  questionType: "MULTIPLE_CHOICE" | "TRUE_FALSE" | "SHORT_ANSWER";
+  options: Option[];
+}
+
+export interface QuizAttemptData {
+  quizId: string;
+  answers: Array<{
+    questionId: string;
+    selectedOptionId?: string;
+    shortAnswerText?: string;
+  }>;
+}
+
+export interface PlanTaskCreate {
+  resource_id: string;
+  is_completed: boolean;
+}
+
+export interface TaskInPlan {
+  id: string;
+  resource_id?: string;
+  quiz_id?: string;
+  is_completed: boolean;
+  time_spent_seconds: number;
+  resource?: Resource;
+  quiz?: Quiz;
+  status: "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED";
+}
+
+export interface QuizAttemptStatus {
+  hasAttempted: boolean;
+  lastAttemptId?: string;
+}
+
+export interface Plan {
+  id: string;
+  cohort_id: string;
+  week_number: number;
+  tasks: TaskInPlan[];
+}
+
+export interface GenericTask {
+  id: string;
+  resource_id: string;
+  is_completed: boolean;
+}
+
+export interface Streak {
+  currentStreak: number;
+  weeklyStreak?: number;
+  lastCompletedDate?: string | null;
+}
+
+export interface WeeklyProgress {
+  week: number;
+  completedTasks: number;
+  totalTasks: number;
+  progress: number;
+}
+
+export interface WeeklyProgressResponse {
+  weeklyProgress: WeeklyProgress[];
+  completionRate: number;
+}
+
+export interface QuizFeedbackData {
+  quiz_id: string;
+  quiz_title: string;
+  score: number;
+  total_questions: number;
+  attempt_id?: string;
+  feedback_text: string;
+  reportContent: string;
+  createdAt: string;
+  feedback_report_content: string;
+}
+
+export interface OptionWithCorrectness {
+  id: string;
+  text: string;
+  isCorrect: boolean;
+}
+
+export interface QuestionWithAttemptAndCorrectAnswer {
+  id: string;
+  text: string;
+  options: OptionWithCorrectness[];
+  type: string;
+  selectedOptionId?: string | null;
+  attemptedAnswerText?: string | null;
+  correctAnswerId?: string | null;
+  correctAnswerText?: string | null;
+}
+
+export interface DetailedQuizAttemptResponse {
+  id: string;
+  quizId: string;
+  learnerId: string;
+  score: number | null;
+  submittedAt: string;
+  feedbackReport: QuizFeedbackData | null;
+  questions: QuestionWithAttemptAndCorrectAnswer[];
+}
+
+export interface Resource {
+  id: string;
+  title: string;
+  type: "VIDEO" | "ARTICLE" | "DOCUMENT" | "QUIZ";
+  url: string;
+  duration: number;
+  tags: string[];
+  isOptional?: boolean;
+  quizId?: string;
+}
+
+export interface WeekResource {
+  week: number;
+  resources: Resource[];
+}
+
+export interface LeaderboardEntry {
+  email: string;
+  completionRate: number;
+  dailyStreak: number;
+  weeklyStreak: number;
+  shortestCompletionTime: number;
+}
+
+export interface Cohort {
+  id: string;
+  name: string;
+  totalWeeks: number;
+}
+
+export interface Session {
+  id: string;
+  title: string;
+  description: string;
+  weekNumber: number;
+  lectureNumber: number;
+  imageUrl?: string;
+  cohortId: string;
+  sessionType?: string;
+}
+
+interface DashboardMetrics {
+  total_learners: number;
+  total_resources: number;
+  completion_percentage: number;
+  average_streak: number;
+  monthlyProgress: Array<{
+    month: string;
+    completionRate: number;
+  }>;
+  learnerProgress: Array<{
+    learnerId: string;
+    completedTasks: number;
+    totalTasks: number;
+    currentStreak: number;
+  }>;
+}
+
+export interface UserData {
+  id: string;
+  name: string | null;
+  email: string | null;
+  totalPosts: number;
+  lastPosted: string | null;
+  totalLikes: number;
+  totalComments: number;
+}
+
+export interface ProfileSystemIkigaiBalanceResponse {
+  ikigai_balance: number;
+}
+
+export interface ProfileSystemIdeationBalanceResponse {
+  ideation_balance: number;
+}
+
+export interface ProfileSystemProjectIdea {
+  id: string;
+  user_id: string;
+  module_name: string;
+  problem_statement: string;
+  solution: string;
+  chat_history: any[];
+  features: string[];
+}
+
+export interface UserWithBalanceAndIdeas {
+  id: string;
+  name: string | null;
+  email: string | null;
+  ikigai_balance: number;
+  module_ideation_balance: Array<{ module: string; balance: number }>;
+  ideas_submitted: number;
+}
+
+export interface Notification {
+  id: string;
+  studentId: string;
+  sessionId: string;
+  message: string;
+  status: "READ" | "UNREAD";
+  createdAt: string;
+  student: {
+    id: string;
+    email: string;
+    name: string | null;
+  };
+}
+
+export interface NotificationUpdate {
+  message: string;
+}
+
+const API_BASE_URL = "https://one00x-be.onrender.com";
+// const API_BASE_URL = "http://localhost:8000";
+const PROFILE_SYSTEM_API_BASE_URL = "https://profile-system.vercel.app";
+
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+const profileSystemApi = axios.create({
+  baseURL: PROFILE_SYSTEM_API_BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+// Add token to requests if available
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (
+      error.response &&
+      (error.response.status === 401 || error.response.status === 403)
+    ) {
+      localStorage.clear();
+      window.location.href = "/";
+    }
+    return Promise.reject(error);
+  }
+);
+
+profileSystemApi.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+profileSystemApi.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (
+      error.response &&
+      (error.response.status === 401 || error.response.status === 403)
+    ) {
+      localStorage.clear();
+      window.location.href = "/";
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Auth APIs
+export const auth = {
+  login: async (email: string, password: string): Promise<AuthResponse> => {
+    const response = await api.post<AuthResponse>("/auth/login", {
+      email,
+      password,
+    });
+    return response.data;
+  },
+  signup: async (
+    email: string,
+    password: string,
+    role: string,
+    cohortId?: string,
+    name?: string,
+    phoneNumber?: string
+  ): Promise<AuthResponse> => {
+    const response = await api.post<AuthResponse>("/auth/signup", {
+      email,
+      password,
+      role,
+      cohortId,
+      name,
+      phoneNumber,
+    });
+    return response.data;
+  },
+};
+
+// Learner APIs
+export const learner = {
+  createPlan: async (
+    cohortId: string,
+    tasks: PlanTaskCreate[]
+  ): Promise<Plan> => {
+    const response = await api.post<Plan>("/api/plans", { cohortId, tasks });
+    return response.data;
+  },
+  trackResourceTime: async (
+    taskId: string,
+    timeSpentSeconds: number
+  ): Promise<void> => {
+    await api.post(`/api/track-resource-time`, { taskId, timeSpentSeconds });
+  },
+  trackQuizTime: async (
+    quizId: string,
+    timeSpentSeconds: number
+  ): Promise<void> => {
+    await api.post(`/api/track-quiz-time`, { quizId, timeSpentSeconds });
+  },
+  getPlan: async (
+    cohortId: string,
+    weekNumber?: number
+  ): Promise<Plan | null> => {
+    const url =
+      weekNumber !== undefined
+        ? `/api/plans/${cohortId}?week_number=${weekNumber}`
+        : `/api/plans/${cohortId}`;
+    const response = await api.get<{
+      success: boolean;
+      data: Plan | null;
+      message: string;
+    }>(url);
+    return response.data.data;
+  },
+  completeTask: async (taskId: string): Promise<GenericTask> => {
+    const response = await api.patch<{
+      success: boolean;
+      data: { task: GenericTask; streak: Streak };
+      message: string;
+    }>(`/api/tasks/${taskId}/complete`);
+    return response.data.data.task;
+  },
+  getStreak: async (): Promise<Streak> => {
+    const response = await api.get<{
+      success: boolean;
+      data: Streak;
+      message: string;
+    }>("/api/streaks/me");
+    return response.data.data;
+  },
+  getWeeklyProgress: async (): Promise<WeeklyProgress[]> => {
+    const response = await api.get<{
+      success: boolean;
+      data: WeeklyProgress[];
+      message: string;
+    }>("/api/progress/weekly");
+    return response.data.data;
+  },
+  getCurrentCohort: async (): Promise<Cohort> => {
+    const response = await api.get<{
+      success: boolean;
+      data: Cohort;
+      message: string;
+    }>("/api/cohorts/current");
+    return response.data.data;
+  },
+  getAllResources: async (cohortId: string): Promise<WeekResource[]> => {
+    const response = await api.get<{
+      success: boolean;
+      data: WeekResource[];
+      message: string;
+    }>(`/api/resources/all_by_cohort/${cohortId}`);
+    return response.data.data;
+  },
+  getLeaderboard: async (): Promise<LeaderboardEntry[]> => {
+    const response = await api.get<{
+      success: boolean;
+      data: LeaderboardEntry[];
+      message: string;
+    }>("/api/leaderboard");
+    return response.data.data;
+  },
+  getQuiz: async (
+    quizId: string
+  ): Promise<{
+    success: boolean;
+    data: Quiz;
+    message: string;
+  }> => {
+    const response = await api.get<{
+      success: boolean;
+      data: Quiz;
+      message: string;
+    }>(`/api/quizzes/${quizId}`);
+    return response.data;
+  },
+  submitQuizAttempt: async (
+    quizId: string,
+    answers: { questionId: string; selectedOptionId: string }[],
+    resourceId: string
+  ): Promise<{ attempt_id: string }> => {
+    const response = await api.post<{ attempt_id: string }>(
+      `/api/quiz-attempts`,
+      { quizId, answers, resourceId }
+    );
+    return response.data;
+  },
+  getQuizFeedback: async (attemptId: string): Promise<QuizFeedbackData> => {
+    const response = await api.get<{
+      success: boolean;
+      data: QuizFeedbackData;
+      message: string;
+    }>(`/api/quiz-attempts/${attemptId}/feedback`);
+    return response.data.data;
+  },
+  getQuizAttemptStatus: async (quizId: string): Promise<QuizAttemptStatus> => {
+    const response = await api.get<{
+      success: boolean;
+      data: QuizAttemptStatus;
+      message: string;
+    }>(`/api/quiz-attempts/${quizId}/status`);
+    return response.data.data;
+  },
+};
+
+export interface ProjectIdea {
+  id: string;
+  user_id: string;
+  module_name: string;
+  chat_history: any[];
+  problem_statement: string;
+  solution: string;
+  features: string[];
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  created_at: string;
+  updated_at: string;
+  profiles: {
+    name: string;
+    cohort_number: string;
+  };
+}
+
+// Instructor APIs
+export const instructor = {
+  getProjectApprovals: async (cohortName?: string): Promise<ProjectIdea[]> => {
+    const response = await profileSystemApi.get<ProjectIdea[]>(
+      "/api/project-approvals",
+      {
+        params: { cohortName },
+      }
+    );
+    return response.data;
+  },
+  updateProjectApprovalStatus: async (
+    id: string,
+    isAccepted: boolean
+  ): Promise<void> => {
+    await profileSystemApi.put("/api/project-approvals-update", {
+      id,
+      isAccepted,
+    });
+  },
+  assignResourcesToWeek: async (
+    cohortId: string,
+    weekNumber: number,
+    resources: Omit<Resource, "id" | "isOptional">[]
+  ): Promise<Resource[]> => {
+    const response = await api.post<{
+      success: boolean;
+      data: Resource[];
+      message: string;
+    }>(`/api/resources/${cohortId}/${weekNumber}`, resources);
+    return response.data.data;
+  },
+  generateQuizFromAI: async (
+    cohortId: string,
+    weekNumber: number,
+    transcription: string
+  ): Promise<Quiz> => {
+    const response = await api.post<Quiz>("/api/quizzes/generate-ai", {
+      cohortId,
+      weekNumber,
+      transcription,
+    });
+    return response.data.data;
+  },
+  deleteWeekResources: async (
+    cohortId: string,
+    weekNumber: number
+  ): Promise<void> => {
+    await api.delete(`/api/resources/${cohortId}/${weekNumber}`);
+  },
+  deleteResource: async (
+    resourceId: string,
+    weekNumber?: number
+  ): Promise<void> => {
+    // Ensure resourceId doesn't contain any trailing segments
+    const cleanResourceId = resourceId.split("/")[0];
+    await api.delete(`/api/resources/${cleanResourceId}`);
+  },
+  getResources: async (
+    cohortId: string,
+    weekNumber: number
+  ): Promise<Resource[]> => {
+    const response = await api.get<Resource[]>(
+      `/api/resources/${cohortId}/${weekNumber}`
+    );
+    return response.data;
+  },
+  getAllResources: async (cohortId: string): Promise<WeekResource[]> => {
+    const response = await api.get<{
+      success: boolean;
+      data: WeekResource[];
+      message: string;
+    }>(`/api/resources/all_by_cohort/${cohortId}`);
+    return response.data.data;
+  },
+  getDashboard: async (cohortId: string): Promise<DashboardMetrics> => {
+    const response = await api.get<{
+      success: boolean;
+      data: DashboardMetrics;
+      message: string;
+    }>(`/api/dashboard/${cohortId}`);
+    return response.data.data;
+  },
+  getCohorts: async (): Promise<Cohort[]> => {
+    const response = await api.get<{
+      success: boolean;
+      data: Cohort[];
+      message: string;
+    }>("/api/cohorts");
+    return response.data.data;
+  },
+  createCohort: async (cohortData: FormData): Promise<Cohort> => {
+    const response = await api.post<Cohort>("/api/cohorts", cohortData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
+  },
+  getQuizzes: async (cohortId?: string): Promise<Quiz[]> => {
+    const response = await api.get<{
+      success: boolean;
+      data: Quiz[];
+      message: string;
+    }>("/api/quizzes", {
+      params: { cohortId },
+    });
+    return response.data.data;
+  },
+  createQuiz: async (quizData: Omit<Quiz, "id">): Promise<Quiz> => {
+    const response = await api.post<{
+      success: boolean;
+      data: Quiz;
+      message: string;
+    }>("/api/quizzes", quizData);
+    return response.data.data;
+  },
+  updateQuiz: async (id: string, quizData: Partial<Quiz>): Promise<Quiz> => {
+    const response = await api.put<Quiz>(`/api/quizzes/${id}`, quizData);
+    return response.data;
+  },
+  deleteQuiz: async (id: string): Promise<void> => {
+    await api.delete(`/api/quizzes/${id}`);
+  },
+  createSession: async (
+    cohortId: string,
+    sessionData: {
+      title: string;
+      description: string;
+      weekNumber: number;
+      lectureNumber: number;
+      imageUrl?: string;
+      sessionType?: string;
+      module_name?: string;
+    },
+    image?: File | null
+  ): Promise<Session> => {
+    const formData = new FormData();
+    formData.append("cohortId", cohortId);
+    formData.append("title", sessionData.title);
+    formData.append("description", sessionData.description);
+    formData.append("weekNumber", sessionData.weekNumber.toString());
+    formData.append("lectureNumber", sessionData.lectureNumber.toString());
+    if (sessionData.imageUrl) {
+      formData.append("imageUrl", sessionData.imageUrl);
+    }
+    if (sessionData.sessionType) {
+      formData.append("sessionType", sessionData.sessionType);
+    }
+    if (sessionData.module_name) {
+      formData.append("module_name", sessionData.module_name);
+    }
+    if (image) {
+      formData.append("image", image);
+    }
+
+    const response = await api.post<Session>(
+      `/api/cohorts/${cohortId}/sessions`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response.data;
+  },
+  getSessions: async (cohortId: string): Promise<Session[]> => {
+    const response = await api.get<Session[]>(
+      `/api/cohorts/${cohortId}/sessions`
+    );
+    return response.data.data;
+  },
+  updateSession: async (
+    sessionId: string,
+    sessionData: {
+      title?: string;
+      description?: string;
+      weekNumber?: number;
+      lectureNumber?: number;
+      imageUrl?: string;
+      sessionType?: string;
+    },
+    image?: File | null
+  ): Promise<Session> => {
+    const formData = new FormData();
+    if (sessionData.title) formData.append("title", sessionData.title);
+    if (sessionData.description)
+      formData.append("description", sessionData.description);
+    if (sessionData.weekNumber)
+      formData.append("weekNumber", sessionData.weekNumber.toString());
+    if (sessionData.lectureNumber)
+      formData.append("lectureNumber", sessionData.lectureNumber.toString());
+    if (sessionData.imageUrl) {
+      formData.append("imageUrl", sessionData.imageUrl);
+    }
+    if (image) {
+      formData.append("image", image);
+    }
+    if (sessionData.sessionType)
+      formData.append("sessionType", sessionData.sessionType);
+
+    const response = await api.put<Session>(
+      `/api/sessions/${sessionId}`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response.data;
+  },
+  deleteSession: async (sessionId: string) => {
+    await api.delete(`/api/sessions/${sessionId}`);
+  },
+  sendNotifications: async (sessionId: string) => {
+    const response = await api.post(
+      `/api/send-notifications?sessionId=${sessionId}`
+    );
+    return response.data;
+  },
+  getUsersData: async (): Promise<UserData[]> => {
+    const response = await api.get<UserData[]>(`/api/admin/users`);
+    return response.data;
+  },
+  fetchLinkedInPosts: async (linkedinCookie: string) => {
+    const response = await api.post(
+      `/api/build-in-public/fetch-linkedin-posts`,
+      {
+        linkedinCookie,
+      }
+    );
+    return response.data;
+  },
+  fetchLinkedInPostsSequentially: async (linkedinCookie: string) => {
+    const response = await api.post(
+      `/api/build-in-public/fetch-linkedin-posts-sequentially`,
+      {
+        linkedinCookie,
+      }
+    );
+    return response.data;
+  },
+  getBuildInPublicUsers: async (cohortId: string): Promise<UserData[]> => {
+    const response = await api.get<UserData[]>(
+      `/api/build-in-public/users?cohortId=${cohortId}`
+    );
+    return response.data;
+  },
+  getUserStats: async (userId: string): Promise<UserStats> => {
+    const response = await api.get<UserStats>(
+      `/api/build-in-public/users/${userId}/analytics`
+    );
+    return response.data;
+  },
+  getUserHeatmap: async (userId: string): Promise<Record<string, number>> => {
+    const response = await api.get<Record<string, number>>(
+      `/api/build-in-public/users/${userId}/heatmap`
+    );
+    return response.data;
+  },
+  getUserPosts: async (userId: string): Promise<Post[]> => {
+    const response = await api.get<Post[]>(
+      `/api/build-in-public/users/${userId}/posts`
+    );
+    return response.data;
+  },
+  updatePostReactionStatus: async (
+    postId: string,
+    hasReacted: boolean
+  ): Promise<any> => {
+    const response = await api.put(
+      `/api/build-in-public/posts/${postId}/react?has_reacted=${hasReacted}`
+    );
+    return response.data;
+  },
+  getSessionNotifications: async (
+    sessionId: string
+  ): Promise<Notification[]> => {
+    const response = await api.get<{
+      success: boolean;
+      data: Notification[];
+      message: string;
+    }>(`/api/sessions/${sessionId}/notifications`);
+    return response.data.data;
+  },
+  getAllNotifications: async (): Promise<Notification[]> => {
+    const response = await api.get<{
+      success: boolean;
+      data: Notification[];
+      message: string;
+    }>(`/api/notifications`);
+    return response.data.data;
+  },
+  updateNotification: async (
+    notificationId: string,
+    data: NotificationUpdate
+  ): Promise<Notification> => {
+    const response = await api.put<{
+      success: boolean;
+      data: Notification;
+      message: string;
+    }>(`/api/notifications/${notificationId}`, data);
+    return response.data.data;
+  },
+  // New functions for profile-system APIs
+  getIkigaiBalance: async (
+    userId: string
+  ): Promise<ProfileSystemIkigaiBalanceResponse> => {
+    const response =
+      await profileSystemApi.get<ProfileSystemIkigaiBalanceResponse>(
+        `/api/ikigai-balance?userId=${userId}`
+      );
+    return response.data;
+  },
+  getIkigai: async (userId: string): Promise<any> => {
+    const response = await profileSystemApi.get<any>(
+      `/api/ikigai?userId=${userId}`
+    );
+    return response.data;
+  },
+  getIdeationBalance: async (
+    userId: string,
+    balanceType: string
+  ): Promise<ProfileSystemIdeationBalanceResponse> => {
+    const response =
+      await profileSystemApi.get<ProfileSystemIdeationBalanceResponse>(
+        `/api/ideation-balance?userId=${userId}&balanceType=${balanceType}`
+      );
+    return response.data;
+  },
+  getProjectIdeas: async (
+    userId: string
+  ): Promise<ProfileSystemProjectIdea[]> => {
+    const response = await profileSystemApi.get<ProfileSystemProjectIdea[]>(
+      `/api/project-ideas?userId=${userId}`
+    );
+    return response.data;
+  },
+  getRoadmaps: async (userId: string): Promise<any> => {
+    const response = await profileSystemApi.get<any>(
+      `/api/roadmaps?userId=${userId}`
+    );
+    return response.data;
+  },
+
+  getUsersByCohort: async (cohortName: string): Promise<UserData[]> => {
+    const response = await profileSystemApi.get<UserData[]>(
+      `/api/users-by-cohort?cohortName=${cohortName}`
+    );
+    return response.data;
+  },
+
+  getUsersWithBalanceAndIdeas: async (
+    cohortId: string
+  ): Promise<UserWithBalanceAndIdeas[]> => {
+    // First, get basic user data from the tracker system
+    const basicUsers = await instructor.getBuildInPublicUsers(cohortId);
+
+    const usersWithEnrichedData: UserWithBalanceAndIdeas[] = await Promise.all(
+      basicUsers.map(async (user) => {
+        // Fetch Ikigai Balance
+        const ikigaiBalanceData = await instructor.getIkigaiBalance(user.id);
+
+        // Fetch Ideation Balance for each module (assuming Module 1-4)
+        const moduleIdeationBalances = await Promise.all(
+          ["Module 1", "Module 2", "Module 3", "Module 4"].map(
+            async (moduleName) => {
+              const ideationBalanceData = await instructor.getIdeationBalance(
+                user.id,
+                moduleName
+              );
+              return {
+                module: moduleName,
+                balance: ideationBalanceData.ideation_balance,
+              };
+            }
+          )
+        );
+
+        // Fetch Project Ideas
+        const projectIdeasData = await instructor.getProjectIdeas(user.id);
+
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          ikigai_balance: ikigaiBalanceData.ikigai_balance,
+          module_ideation_balance: moduleIdeationBalances,
+          ideas_submitted: projectIdeasData.length,
+        };
+      })
+    );
+
+    return usersWithEnrichedData;
+  },
+};

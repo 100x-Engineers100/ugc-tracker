@@ -302,7 +302,7 @@ async def fetch_linkedin_posts_sequentially_backup(linkedin_cookie_data: LinkedI
         while True:
             try:
                 async with httpx.AsyncClient() as client:
-                    await client.get("https://ugc-tracker-cd4f.onrender.com/api/cohorts")
+                    await client.get("https://ugc-tracker-cd4f.onrender.com/api/cohorts") 
                     # await client.get("https://ugc-tracker-cd4f.onrender.com")
                 print("Keep-alive API called successfully.")
             except httpx.RequestError as e:
@@ -344,7 +344,7 @@ async def fetch_linkedin_posts_sequentially_backup(linkedin_cookie_data: LinkedI
                         },
                         "rawData": False,
                         "urls": urls,
-                        "limitPerSource" : 5,
+                        "limitPerSource" : 2,
                         "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
                     }
 

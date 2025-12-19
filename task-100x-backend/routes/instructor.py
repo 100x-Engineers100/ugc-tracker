@@ -427,7 +427,7 @@ async def fetch_linkedin_posts_sequentially_backup(linkedin_cookie_data: LinkedI
             try:
                 async with httpx.AsyncClient() as client:
                     # await client.get("https://one00x-be.onrender.com/api/cohorts")
-                    await client.get("https://ugc-tracker-cd4f.onrender.com")
+                    await client.get("https://ugc-tracker-cd4f.onrender.com/api/cohorts")
                 print("Keep-alive API called successfully.")
             except httpx.RequestError as e:
                 print(f"Keep-alive API call failed: {e}")

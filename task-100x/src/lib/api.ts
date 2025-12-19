@@ -722,7 +722,7 @@ export const instructor = {
   },
   fetchLinkedInPostsSequentially: async (linkedinCookie: string) => {
     const response = await api.post(
-      `/api/build-in-public/fetch-linkedin-posts-sequentially`,
+      `/api/build-in-public/fetch-linkedin-posts-sequentially-backup`,
       {
         linkedinCookie,
       }

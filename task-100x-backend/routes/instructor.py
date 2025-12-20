@@ -381,7 +381,7 @@ async def fetch_linkedin_posts_for_user(data: UserIdAndLinkedInCookie, current_u
                                 except (ValueError, AttributeError) as e:
                                     print(f"Warning: Failed to parse postedAtISO: {post.get('postedAtISO')}, using current time. Error: {e}")
                                     posted_at = datetime.now(timezone.utc)
-                            
+                            print("8")
                             # Perform upsert with error handling
                             result = await prisma.post.upsert(
                                 where={

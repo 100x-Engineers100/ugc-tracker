@@ -293,6 +293,99 @@ async def get_user_roadmaps(user_id: str, current_user = Depends(get_current_use
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
 
+class UserIdAndLinkedInCookie(BaseModel):
+    userId: str
+    linkedinCookie: str
+
+@router.post("/build-in-public/fetch-linkedin-posts-for-user")
+async def fetch_linkedin_posts_for_user(data: UserIdAndLinkedInCookie, current_user = Depends(get_current_user), prisma: Prisma = Depends(get_prisma_client)):
+    if current_user.role != "INSTRUCTOR":
+        raise HTTPException(status_code=403, detail="Only instructors can fetch LinkedIn posts for a specific user")
+
+    try:
+        user = await prisma.user.find_unique(
+            where={"id": data.userId}
+        )
+
+        if not user or not user.linkedinUsername:
+            raise HTTPException(status_code=404, detail="User not found or LinkedIn username not set for this user.")
+
+        url = f"https://www.linkedin.com/in/{user.linkedinUsername}/recent-activity/all/"
+        urls = [url]
+
+        apify_request_body = {
+            "cookie": json.loads(data.linkedinCookie),
+            "deepScrape": True,
+            "maxDelay": 8,
+            "minDelay": 2,
+            "proxy": {
+                "useApifyProxy": True,
+                "apifyProxyCountry": "US",
+            },
+            "rawData": False,
+            "urls": urls,
+            "limitPerSource": 5,
+            "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+        }
+
+        apify_api_token = os.environ.get("APIFY_API_TOKEN")
+        apify_api_url = f"https://api.apify.com/v2/acts/curious_coder~linkedin-post-search-scraper/run-sync-get-dataset-items?token={apify_api_token}"
+
+        async with httpx.AsyncClient(timeout=3600.0) as client:
+            apify_response = await client.post(apify_api_url, json=apify_request_body)
+            apify_response.raise_for_status()
+
+        apify_data = apify_response.json()
+        all_apify_data = []
+        all_apify_data.extend(apify_data)
+
+        for post in apify_data:
+            if "text" in post and post["text"] is not None:
+                post_text_lower = post["text"].lower()
+                if re.search(r'\b(0to100xengineers|0to100xengineer|0to100xEngineers|0to100xEngineer|100xengineer|100xengineers|100xEngineers|#100xengineers|#0to100xengineers|#0to100xengineer|#0to100xEngineers|#0to100xEngineer)', post_text_lower, re.IGNORECASE):
+                    linkedin_username = None
+                    if "inputUrl" in post and post["inputUrl"]:
+                        parts = post["inputUrl"].split("/in/")
+                        if len(parts) > 1:
+                            linkedin_username = parts[1].split("/")[0]
+
+                        if linkedin_username and linkedin_username == user.linkedinUsername:
+                            await prisma.post.upsert(
+                                where={
+                                    "url": post["url"]
+                                },
+                                data={
+                                    "create": {
+                                        "userId": user.id,
+                                        "url": post["url"],
+                                        "platform": "LINKEDIN",
+                                        "numLikes": post.get("numLikes", 0),
+                                        "numComments": post.get("numComments", 0),
+                                        "postedAt": datetime.fromisoformat(post["postedAtISO"].replace("Z", "+00:00")) if "postedAtISO" in post else datetime.now(timezone.utc),
+                                    },
+                                    "update": {
+                                        "numLikes": post.get("numLikes", 0),
+                                        "numComments": post.get("numComments", 0),
+                                        "postedAt": datetime.fromisoformat(post["postedAtISO"].replace("Z", "+00:00")) if "postedAtISO" in post else datetime.now(timezone.utc),
+                                    },
+                                }
+                            )
+        return {"message": f"LinkedIn posts fetched and processed for user {user.name}!", "data": all_apify_data}
+
+    except httpx.HTTPStatusError as e:
+        print(f"Apify API HTTP error: {e.response.status_code} - {e.response.text}")
+        raise HTTPException(status_code=e.response.status_code, detail=f"Apify API error: {e.response.text}")
+    except httpx.RequestError as e:
+        print(f"HTTPX request error: {e}")
+        raise HTTPException(status_code=500, detail=f"Network or request error: {e}")
+    except json.JSONDecodeError:
+        print("JSON decoding error: Invalid LinkedIn cookie format or Apify response.")
+        raise HTTPException(status_code=400, detail="Invalid LinkedIn cookie format or Apify response. Must be a JSON string.")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+
 @router.post("/build-in-public/fetch-linkedin-posts-sequentially")
 async def fetch_linkedin_posts_sequentially_backup(linkedin_cookie_data: LinkedInCookie, current_user = Depends(get_current_user), prisma: Prisma = Depends(get_prisma_client)):
     if current_user.role != "INSTRUCTOR":

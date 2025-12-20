@@ -257,7 +257,7 @@ export interface NotificationUpdate {
 }
 
 // const API_BASE_URL = "https://one00x-be.onrender.com";
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = "https://ugc-tracker-cd4f.onrender.com";
 // const PROFILE_SYSTEM_API_BASE_URL = "http://localhost:3000";
 const PROFILE_SYSTEM_API_BASE_URL = "https://profile-system.vercel.app";
 

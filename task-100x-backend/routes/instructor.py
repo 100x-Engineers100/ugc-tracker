@@ -119,7 +119,10 @@ async def fetch_linkedin_posts(linkedin_cookie_data: LinkedInCookie, current_use
                 for post in apify_data:
                     if "text" in post and post["text"] is not None:
                         post_text_lower = post["text"].lower()
-                        if re.search(r'\b(0to100xengineers|0to100xengineer|0to100xEngineers|0to100xEngineer|100xengineer|100xengineers|100xEngineers|#100xengineers|#0to100xengineers|#0to100xengineer|#0to100xEngineers|#0to100xEngineer)', post_text_lower, re.IGNORECASE):
+                        
+                
+                        #if re.search(r'\b(0to100xengineers|0to100xengineer|0to100xEngineers|0to100xEngineer|100xengineer|100xengineers|100xEngineers|#100xengineers|#0to100xengineers|#0to100xengineer|#0to100xEngineers|#0to100xEngineer)', post_text_lower, re.IGNORECASE):
+                        if re.search(r'(?:^|\s|#)(?:0to100xengineers?|100xengineers?)(?=\s|$|[^\w])', post_text_lower):
                             linkedin_username = None
                             if "inputUrl" in post and post["inputUrl"]:
                                 parts = post["inputUrl"].split("/in/")
@@ -342,7 +345,10 @@ async def fetch_linkedin_posts_for_user(data: UserIdAndLinkedInCookie, current_u
         for post in apify_data:
             if "text" in post and post["text"] is not None:
                 post_text_lower = post["text"].lower()
-                if re.search(r'\b(0to100xengineers|0to100xengineer|0to100xEngineers|0to100xEngineer|100xengineer|100xengineers|100xEngineers|#100xengineers|#0to100xengineers|#0to100xengineer|#0to100xEngineers|#0to100xEngineer)', post_text_lower, re.IGNORECASE):
+                # Match hashtags (#0to100xengineers, #100xengineers) or plain mentions
+                # Since text is lowercased, we only need lowercase patterns
+                # Pattern: start boundary (^, whitespace, or #), then keywords, then end boundary
+                if re.search(r'(?:^|\s|#)(?:0to100xengineers?|100xengineers?)(?=\s|$|[^\w])', post_text_lower):
                     linkedin_username = None
                     if "inputUrl" in post and post["inputUrl"]:
                         parts = post["inputUrl"].split("/in/")
@@ -455,7 +461,8 @@ async def fetch_linkedin_posts_sequentially_backup(linkedin_cookie_data: LinkedI
                     for post in apify_data:
                         if "text" in post and post["text"] is not None:
                             post_text_lower = post["text"].lower()
-                            if re.search(r'\b(0to100xengineers|0to100xengineer|0to100xEngineers|0to100xEngineer|100xengineer|100xengineers|100xEngineers|#100xengineers|#0to100xengineers|#0to100xengineer|#0to100xEngineers|#0to100xEngineer)', post_text_lower, re.IGNORECASE):
+                            #if re.search(r'\b(0to100xengineers|0to100xengineer|0to100xEngineers|0to100xEngineer|100xengineer|100xengineers|100xEngineers|#100xengineers|#0to100xengineers|#0to100xengineer|#0to100xEngineers|#0to100xEngineer)', post_text_lower, re.IGNORECASE):
+                            if re.search(r'(?:^|\s|#)(?:0to100xengineers?|100xengineers?)(?=\s|$|[^\w])', post_text_lower):
                                 linkedin_username = None
                                 if "inputUrl" in post and post["inputUrl"]:
                                     parts = post["inputUrl"].split("/in/")
@@ -595,7 +602,8 @@ async def fetch_linkedin_posts_sequentially_backup(linkedin_cookie_data: LinkedI
                     for post in apify_data:
                         if "text" in post and post["text"] is not None:
                             post_text_lower = post["text"].lower()
-                            if re.search(r'\b(0to100xengineers|0to100xengineer|0to100xEngineers|0to100xEngineer|100xengineer|100xengineers|100xEngineers|#100xengineers|#0to100xengineers|#0to100xengineer|#0to100xEngineers|#0to100xEngineer)', post_text_lower, re.IGNORECASE):
+                            #if re.search(r'\b(0to100xengineers|0to100xengineer|0to100xEngineers|0to100xEngineer|100xengineer|100xengineers|100xEngineers|#100xengineers|#0to100xengineers|#0to100xengineer|#0to100xEngineers|#0to100xEngineer)', post_text_lower, re.IGNORECASE):
+                            if re.search(r'(?:^|\s|#)(?:0to100xengineers?|100xengineers?)(?=\s|$|[^\w])', post_text_lower):
                                 linkedin_username = None
                                 if "inputUrl" in post and post["inputUrl"]:
                                     parts = post["inputUrl"].split("/in/")

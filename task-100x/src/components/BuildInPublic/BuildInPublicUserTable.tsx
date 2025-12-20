@@ -33,6 +33,7 @@ const BuildInPublicUserTable = ({ cohortId }: BuildInPublicUserTableProps) => {
   const [error, setError] = useState<string | null>(null);
   const [linkedinCookie, setLinkedinCookie] = useState("");
   const [isFetchingPosts, setIsFetchingPosts] = useState(false);
+  const [fetchedUsersCount, setFetchedUsersCount] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -55,12 +56,21 @@ const BuildInPublicUserTable = ({ cohortId }: BuildInPublicUserTableProps) => {
 
   const handleFetchLinkedInPosts = async () => {
     setIsFetchingPosts(true);
+    setFetchedUsersCount(0);
     try {
-      // const response = await instructor.fetchLinkedInPosts(linkedinCookie);
-      const response = await instructor.fetchLinkedInPostsSequentially(linkedinCookie);
+      // const response = await instructor.fetchLinkedInPostsSequentially(linkedinCookie);
+      
+      for (const user of users) {
+        const success = await handleFetchUserLinkedInPosts(user.id);
+        if (success) {
+          setFetchedUsersCount(prevCount => prevCount + 1);
+        }
+        await new Promise(resolve => setTimeout(resolve, 3000)); // 3-second delay
+      }
+
       toast({
         title: "Success",
-        description: "LinkedIn posts fetched and updated successfully!",
+        description: "LinkedIn posts fetched and updated for all users successfully!",
       });
     } catch (error) {
       console.error("Error fetching LinkedIn posts:", error);
@@ -71,6 +81,25 @@ const BuildInPublicUserTable = ({ cohortId }: BuildInPublicUserTableProps) => {
       });
     } finally {
       setIsFetchingPosts(false);
+    }
+  };
+
+  const handleFetchUserLinkedInPosts = async (userId: string): Promise<boolean> => {
+    try {
+      const response = await instructor.fetchLinkedInPostsForUser(userId, linkedinCookie);
+      toast({
+        title: "Success",
+        description: `LinkedIn posts fetched and updated for user ${userId}!`, 
+      });
+      return true;
+    } catch (error) {
+      console.error(`Error fetching LinkedIn posts for user ${userId}:`, error);
+      toast({
+        variant: "destructive",
+        title: `Error fetching LinkedIn posts for user ${userId}`,
+        description: error.response?.data?.detail || "Failed to fetch LinkedIn posts.",
+      });
+      return false;
     }
   };
 
@@ -150,6 +179,9 @@ const BuildInPublicUserTable = ({ cohortId }: BuildInPublicUserTableProps) => {
         </Button>
         <Button onClick={handleDownloadCSV}>Download User Data (CSV)</Button>
       </div>
+      {isFetchingPosts && (
+        <p className="mb-2">Fetching posts: {fetchedUsersCount} / {users.length} users completed</p>
+      )}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -161,6 +193,7 @@ const BuildInPublicUserTable = ({ cohortId }: BuildInPublicUserTableProps) => {
               <TableHead>Total Likes</TableHead>
               <TableHead>Total Comments</TableHead>
               <TableHead>Last Posted</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -173,6 +206,15 @@ const BuildInPublicUserTable = ({ cohortId }: BuildInPublicUserTableProps) => {
                 <TableCell>{user.totalLikes}</TableCell>
                 <TableCell>{user.totalComments}</TableCell>
                 <TableCell>{user.lastPosted ? new Date(user.lastPosted).toLocaleDateString() : 'N/A'}</TableCell>
+                <TableCell>
+                  <Button
+                    onClick={() => handleFetchUserLinkedInPosts(user.id)}
+                    disabled={isFetchingPosts}
+                    size="sm"
+                  >
+                     {isFetchingPosts ? 'Fetching...' : 'Fetch Posts'}
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

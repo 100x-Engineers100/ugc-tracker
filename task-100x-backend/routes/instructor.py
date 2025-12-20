@@ -363,6 +363,7 @@ async def fetch_linkedin_posts_for_user(data: UserIdAndLinkedInCookie, current_u
                             linkedin_username = parts[1].split("/")[0]
                             print("5")
                         if linkedin_username and linkedin_username == user.linkedinUsername:
+                            print("7")
                             await prisma.post.upsert(
                                 where={
                                     "url": post["url"]

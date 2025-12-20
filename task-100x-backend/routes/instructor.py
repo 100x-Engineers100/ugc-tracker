@@ -364,9 +364,26 @@ async def fetch_linkedin_posts_for_user(data: UserIdAndLinkedInCookie, current_u
                             print("5")
                             print(linkedin_username)
                             print(user.linkedinUsername)
-                        if linkedin_username and linkedin_username == user.linkedinUsername:
-                            print("7")
-                            await prisma.post.upsert(
+                    
+                    if linkedin_username and linkedin_username == user.linkedinUsername:
+                        print("7")
+                        # Validate required fields before upsert
+                        if "url" not in post or not post["url"]:
+                            print(f"Warning: Post missing URL, skipping. Post data: {post}")
+                            continue
+                        
+                        try:
+                            # Parse postedAt datetime
+                            posted_at = datetime.now(timezone.utc)
+                            if "postedAtISO" in post and post["postedAtISO"]:
+                                try:
+                                    posted_at = datetime.fromisoformat(post["postedAtISO"].replace("Z", "+00:00"))
+                                except (ValueError, AttributeError) as e:
+                                    print(f"Warning: Failed to parse postedAtISO: {post.get('postedAtISO')}, using current time. Error: {e}")
+                                    posted_at = datetime.now(timezone.utc)
+                            
+                            # Perform upsert with error handling
+                            result = await prisma.post.upsert(
                                 where={
                                     "url": post["url"]
                                 },
@@ -375,17 +392,22 @@ async def fetch_linkedin_posts_for_user(data: UserIdAndLinkedInCookie, current_u
                                         "userId": user.id,
                                         "url": post["url"],
                                         "platform": "LINKEDIN",
-                                        "numLikes": post.get("numLikes", 0),
-                                        "numComments": post.get("numComments", 0),
-                                        "postedAt": datetime.fromisoformat(post["postedAtISO"].replace("Z", "+00:00")) if "postedAtISO" in post else datetime.now(timezone.utc),
+                                        "numLikes": post.get("numLikes", 0) or 0,
+                                        "numComments": post.get("numComments", 0) or 0,
+                                        "postedAt": posted_at,
                                     },
                                     "update": {
-                                        "numLikes": post.get("numLikes", 0),
-                                        "numComments": post.get("numComments", 0),
-                                        "postedAt": datetime.fromisoformat(post["postedAtISO"].replace("Z", "+00:00")) if "postedAtISO" in post else datetime.now(timezone.utc),
+                                        "numLikes": post.get("numLikes", 0) or 0,
+                                        "numComments": post.get("numComments", 0) or 0,
+                                        "postedAt": posted_at,
                                     },
                                 }
                             )
+                            print(f"Successfully upserted post with URL: {post['url']}")
+                        except Exception as e:
+                            print(f"Error upserting post with URL {post.get('url', 'N/A')}: {e}")
+                            traceback.print_exc()
+                            # Continue processing other posts even if one fails
         print("6")
         return {"message": f"LinkedIn posts fetched and processed for user {user.name}!", "data": all_apify_data}
 

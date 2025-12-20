@@ -343,18 +343,22 @@ async def fetch_linkedin_posts_for_user(data: UserIdAndLinkedInCookie, current_u
         all_apify_data.extend(apify_data)
 
         for post in apify_data:
+            print("1")
             if "text" in post and post["text"] is not None:
+                print("2")
                 post_text_lower = post["text"].lower()
                 # Match hashtags (#0to100xengineers, #100xengineers) or plain mentions
                 # Since text is lowercased, we only need lowercase patterns
                 # Pattern: start boundary (^, whitespace, or #), then keywords, then end boundary
                 if re.search(r'(?:^|\s|#)(?:0to100xengineers?|100xengineers?)(?=\s|$|[^\w])', post_text_lower):
+                    print("3")
                     linkedin_username = None
                     if "inputUrl" in post and post["inputUrl"]:
+                        print("4")
                         parts = post["inputUrl"].split("/in/")
                         if len(parts) > 1:
                             linkedin_username = parts[1].split("/")[0]
-
+                            print("5")
                         if linkedin_username and linkedin_username == user.linkedinUsername:
                             await prisma.post.upsert(
                                 where={
@@ -376,6 +380,7 @@ async def fetch_linkedin_posts_for_user(data: UserIdAndLinkedInCookie, current_u
                                     },
                                 }
                             )
+        print("6")
         return {"message": f"LinkedIn posts fetched and processed for user {user.name}!", "data": all_apify_data}
 
     except httpx.HTTPStatusError as e:

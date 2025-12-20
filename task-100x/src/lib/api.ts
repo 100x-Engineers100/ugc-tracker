@@ -203,6 +203,14 @@ export interface UserData {
   totalComments: number;
 }
 
+export interface UserStats {
+  name: string;
+  currentStreak: number;
+  longestStreak: number;
+  totalPosts: number;
+  rank: number;
+}
+
 export interface ProfileSystemIkigaiBalanceResponse {
   ikigai_balance: number;
 }
@@ -249,8 +257,8 @@ export interface NotificationUpdate {
 }
 
 // const API_BASE_URL = "https://one00x-be.onrender.com";
-const API_BASE_URL = "https://ugc-tracker-cd4f.onrender.com";
-// const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = "http://localhost:8000";
+// const PROFILE_SYSTEM_API_BASE_URL = "http://localhost:3000";
 const PROFILE_SYSTEM_API_BASE_URL = "https://profile-system.vercel.app";
 
 const api = axios.create({
@@ -722,8 +730,18 @@ export const instructor = {
   },
   fetchLinkedInPostsSequentially: async (linkedinCookie: string) => {
     const response = await api.post(
-      `/api/build-in-public/fetch-linkedin-posts-sequentially-backup`,
+      `/api/build-in-public/fetch-linkedin-posts-sequentially`,
       {
+        linkedinCookie,
+      }
+    );
+    return response.data;
+  },
+  fetchLinkedInPostsForUser: async (userId: string, linkedinCookie: string) => {
+    const response = await api.post(
+      `/api/build-in-public/fetch-linkedin-posts-for-user`, //test
+      {
+        userId,
         linkedinCookie,
       }
     );

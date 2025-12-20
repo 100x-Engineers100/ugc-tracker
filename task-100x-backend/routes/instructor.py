@@ -343,10 +343,13 @@ async def fetch_linkedin_posts_for_user(data: UserIdAndLinkedInCookie, current_u
         all_apify_data.extend(apify_data)
 
         for post in apify_data:
+
             print("1")
             if "text" in post and post["text"] is not None:
                 print("2")
+
                 post_text_lower = post["text"].lower()
+                print(post_text_lower)
                 # Match hashtags (#0to100xengineers, #100xengineers) or plain mentions
                 # Since text is lowercased, we only need lowercase patterns
                 # Pattern: start boundary (^, whitespace, or #), then keywords, then end boundary
